@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FruitHaven — Fresh Fruits Delivered</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --green: #4ade80;
+      --green-dark: #22c55e;
+      --green-glow: rgba(74,222,128,0.25);
+      --orange: #fb923c;
+      --orange-glow: rgba(251,146,60,0.2);
+      --bg: #0a0f0d;
+      --bg2: #0f1a12;
+      --surface: rgba(255,255,255,0.04);
+      --surface2: rgba(255,255,255,0.07);
+      --border: rgba(255,255,255,0.08);
+      --text: #e8f5ec;
+      --text-muted: rgba(232,245,236,0.5);
+      --shadow: 0 4px 32px rgba(0,0,0,0.5);
+      --shadow-lg: 0 16px 64px rgba(0,0,0,0.6);
+      --radius: 18px;
+      --radius-sm: 10px;
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    /* Noise overlay for texture */
+    body::before {
+      content:'';
+      position:fixed;
+      inset:0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events:none;
+      z-index:9999;
+      opacity:.4;
+    }
+
+    /* Ambient glow blobs */
+    .ambient {
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      z-index:0;
+    }
+    .ambient-blob {
+      position:absolute;
+      border-radius:50%;
+      filter:blur(120px);
+      opacity:0.18;
+    }
+    .ab1 { width:600px;height:600px;background:#22c55e;top:-200px;right:-150px;animation:aFloat 12s ease-in-out infinite; }
+    .ab2 { width:400px;height:400px;background:#fb923c;bottom:-100px;left:-100px;animation:aFloat 15s ease-in-out infinite reverse; }
+    .ab3 { width:300px;height:300px;background:#a3e635;top:50%;left:40%;animation:aFloat 18s ease-in-out infinite 3s; }
+    @keyframes aFloat {
+      0%,100%{transform:translate(0,0)scale(1);}
+      50%{transform:translate(40px,-40px)scale(1.1);}
+    }
+
+    /* ===== NAV ===== */
+    .nav {
+      position:fixed;top:0;left:0;right:0;
+      z-index:1000;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:1rem 2rem;
+      background:rgba(10,15,13,0.7);
+      backdrop-filter:blur(24px);
+      -webkit-backdrop-filter:blur(24px);
+      border-bottom:1px solid var(--border);
+      transition:var(--transition);
+    }
+    .nav.scrolled { background:rgba(10,15,13,0.92);box-shadow:0 4px 32px rgba(0,0,0,0.5); }
+    .nav-logo { font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:900;color:var(--green);cursor:pointer;text-shadow:0 0 20px var(--green-glow); }
+    .nav-links { display:flex;list-style:none;gap:2rem; }
+    .nav-links a { text-decoration:none;color:var(--text-muted);font-weight:500;font-size:0.9rem;transition:var(--transition);position:relative; }
+    .nav-links a::after { content:'';position:absolute;bottom:-4px;left:0;width:0;height:2px;background:var(--orange);transition:var(--transition); }
+    .nav-links a:hover::after { width:100%; }
+    .nav-links a:hover { color:var(--text); }
+    .cart-btn { background:var(--green-dark);color:#0a0f0d;border:none;padding:0.6rem 1.2rem;border-radius:50px;font-family:'DM Sans',sans-serif;font-weight:700;cursor:pointer;transition:var(--transition);display:flex;align-items:center;gap:0.4rem;font-size:0.9rem;box-shadow:0 0 20px var(--green-glow); }
+    .cart-btn:hover { background:var(--green);transform:scale(1.05); }
+    .cart-count { background:var(--orange);color:white;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700; }
+    .hamburger { display:none;background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text); }
+    .mobile-menu { display:none;position:fixed;top:70px;left:0;right:0;background:rgba(10,15,13,0.95);backdrop-filter:blur(24px);z-index:999;flex-direction:column;padding:1rem 2rem;gap:1rem;border-bottom:1px solid var(--border); }
+    .mobile-menu.open { display:flex; }
+    .mobile-menu a { text-decoration:none;color:var(--text-muted);font-weight:500;padding:0.5rem 0;border-bottom:1px solid var(--border); }
+
+    /* ===== HERO ===== */
+    .hero {
+      min-height:100vh;
+      display:grid;grid-template-columns:1fr 1fr;
+      align-items:center;
+      padding:6rem 4rem 4rem;
+      position:relative;overflow:hidden;
+      background:linear-gradient(135deg,#0a0f0d 0%,#0d1a10 50%,#0a0f0d 100%);
+    }
+    .hero-content { position:relative;z-index:1; }
+    .hero-tag { display:inline-block;background:rgba(74,222,128,0.12);color:var(--green);border:1px solid rgba(74,222,128,0.3);padding:0.4rem 1rem;border-radius:50px;font-size:0.8rem;font-weight:500;letter-spacing:0.05em;margin-bottom:1.5rem; }
+    .hero-title { font-family:'Playfair Display',serif;font-size:clamp(3rem,6vw,5.5rem);font-weight:900;line-height:1.05;color:var(--text);margin-bottom:1.5rem; }
+    .hero-title em { font-style:italic;color:var(--orange);text-shadow:0 0 30px var(--orange-glow); }
+    .hero-sub { font-size:1rem;color:var(--text-muted);line-height:1.7;max-width:420px;margin-bottom:2rem; }
+    .hero-btns { display:flex;gap:1rem;margin-bottom:3rem; }
+    .btn-primary { background:var(--green-dark);color:#0a0f0d;border:none;padding:0.9rem 2rem;border-radius:50px;font-family:'DM Sans',sans-serif;font-weight:700;cursor:pointer;transition:var(--transition);font-size:0.95rem;text-decoration:none;display:inline-flex;align-items:center;gap:0.5rem;box-shadow:0 0 20px var(--green-glow); }
+    .btn-primary:hover { background:var(--green);transform:translateY(-2px);box-shadow:0 0 40px var(--green-glow); }
+    .btn-outline { border:1.5px solid rgba(74,222,128,0.4);color:var(--green);background:transparent;padding:0.9rem 2rem;border-radius:50px;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;transition:var(--transition);font-size:0.95rem;text-decoration:none;display:inline-flex;align-items:center; }
+    .btn-outline:hover { background:rgba(74,222,128,0.08);border-color:var(--green);transform:translateY(-2px); }
+    .hero-stats { display:flex;gap:2rem; }
+    .stat strong { display:block;font-size:1.4rem;font-weight:700;color:var(--green); }
+    .stat span { font-size:0.8rem;color:var(--text-muted); }
+
+    /* Fruit orbit */
+    .hero-visual { display:flex;align-items:center;justify-content:center;position:relative;z-index:1; }
+    .fruit-orbit { position:relative;width:400px;height:400px; }
+    .orbit-ring { position:absolute;border-radius:50%;animation:orbit linear infinite; }
+    .ring1 { width:300px;height:300px;top:50px;left:50px;animation-duration:12s;border:1px dashed rgba(74,222,128,0.15); }
+    .ring2 { width:200px;height:200px;top:100px;left:100px;animation-duration:8s;animation-direction:reverse;border:1px dashed rgba(251,146,60,0.15); }
+    @keyframes orbit { from{transform:rotate(0deg);}to{transform:rotate(360deg);} }
+    .orbit-fruit { position:absolute;font-size:2.2rem;--r:calc(var(--size,150px)/2);transform:rotate(var(--angle)) translate(var(--r)) rotate(calc(-1*var(--angle)));top:50%;left:50%;margin:-1.1rem; filter:drop-shadow(0 0 12px rgba(74,222,128,0.3)); }
+    .ring1 .orbit-fruit { --size:300px; }
+    .ring2 .orbit-fruit { --size:200px; }
+    .center-fruit { position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:5rem;animation:pulse 3s ease-in-out infinite;filter:drop-shadow(0 0 30px rgba(251,146,60,0.5)); }
+    @keyframes pulse { 0%,100%{transform:translate(-50%,-50%)scale(1);}50%{transform:translate(-50%,-50%)scale(1.1);} }
+
+    /* ===== MARQUEE ===== */
+    .marquee-strip { background:rgba(74,222,128,0.08);border-top:1px solid rgba(74,222,128,0.15);border-bottom:1px solid rgba(74,222,128,0.15);padding:0.9rem 0;overflow:hidden; }
+    .marquee-inner { display:flex;gap:3rem;white-space:nowrap;animation:marquee 25s linear infinite; }
+    .marquee-inner span { color:var(--text-muted);font-weight:500;font-size:0.9rem;flex-shrink:0; }
+    @keyframes marquee { from{transform:translateX(0);}to{transform:translateX(-50%);} }
+
+    /* ===== SECTION TITLES ===== */
+    .section-title { font-family:'Playfair Display',serif;font-size:clamp(1.8rem,3vw,2.8rem);font-weight:700;margin-bottom:2.5rem;color:var(--text); }
+    .section-title em { font-style:italic;color:var(--orange); }
+    .container { max-width:1200px;margin:0 auto;padding:0 2rem; }
+
+    /* ===== CATEGORIES ===== */
+    .categories { padding:5rem 0;background:var(--bg); }
+    .cat-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:1.5rem; }
+    .cat-card { background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:2rem 1.5rem;text-align:center;cursor:pointer;transition:var(--transition);backdrop-filter:blur(12px); }
+    .cat-card:hover { background:var(--surface2);border-color:rgba(74,222,128,0.3);transform:translateY(-4px);box-shadow:0 8px 32px rgba(74,222,128,0.1); }
+    .cat-icon { font-size:3rem;margin-bottom:1rem;display:block; }
+    .cat-card h3 { font-size:1rem;font-weight:600;margin-bottom:0.3rem;color:var(--text); }
+    .cat-card p { font-size:0.8rem;color:var(--text-muted); }
+
+    /* ===== SHOP ===== */
+    .shop { padding:5rem 0;background:var(--bg2); }
+    .filter-bar { display:flex;gap:0.7rem;margin-bottom:2.5rem;flex-wrap:wrap; }
+    .filter-btn { background:var(--surface);border:1px solid var(--border);color:var(--text-muted);padding:0.5rem 1.2rem;border-radius:50px;font-size:0.85rem;cursor:pointer;transition:var(--transition);font-family:'DM Sans',sans-serif;backdrop-filter:blur(8px); }
+    .filter-btn:hover,.filter-btn.active { background:rgba(74,222,128,0.15);border-color:var(--green);color:var(--green); }
+    .products-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:1.5rem; }
+    .product-card { background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:var(--transition);backdrop-filter:blur(12px); }
+    .product-card:hover { transform:translateY(-6px);box-shadow:0 16px 48px rgba(0,0,0,0.4),0 0 0 1px rgba(74,222,128,0.2);border-color:rgba(74,222,128,0.2); }
+    .product-img { background:linear-gradient(135deg,rgba(74,222,128,0.06),rgba(251,146,60,0.06));padding:2rem;text-align:center;font-size:4rem;position:relative;border-bottom:1px solid var(--border); }
+    .product-badge { position:absolute;top:0.8rem;left:0.8rem;background:var(--orange);color:white;font-size:0.65rem;font-weight:700;padding:0.2rem 0.6rem;border-radius:50px; }
+    .product-info { padding:1.2rem; }
+    .product-name { font-weight:600;margin-bottom:0.3rem;font-size:0.95rem;color:var(--text); }
+    .product-origin { font-size:0.75rem;color:var(--text-muted);margin-bottom:0.8rem; }
+    .product-bottom { display:flex;align-items:center;justify-content:space-between; }
+    .product-price { font-weight:700;font-size:1.1rem;color:var(--green); }
+    .add-btn { background:var(--green-dark);color:#0a0f0d;border:none;width:34px;height:34px;border-radius:50%;font-size:1.3rem;cursor:pointer;transition:var(--transition);display:flex;align-items:center;justify-content:center;font-weight:700;box-shadow:0 0 12px var(--green-glow); }
+    .add-btn:hover { background:var(--green);transform:scale(1.15); }
+
+    /* ===== ABOUT ===== */
+    .about { padding:5rem 0;background:var(--bg); }
+    .about-inner { display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center; }
+    .about-text p { color:var(--text-muted);line-height:1.8;margin-bottom:1.5rem; }
+    .about-list { list-style:none;display:flex;flex-direction:column;gap:0.7rem; }
+    .about-list li { color:var(--text-muted);font-size:0.9rem; }
+    .about-visual { display:flex;flex-direction:column;gap:1rem; }
+    .about-card { background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1.5rem;display:flex;gap:1rem;align-items:flex-start;backdrop-filter:blur(12px);transition:var(--transition); }
+    .about-card:hover { border-color:rgba(74,222,128,0.3);background:var(--surface2); }
+    .about-emoji { font-size:2rem; }
+    .about-card h4 { font-size:0.95rem;font-weight:600;margin-bottom:0.3rem;color:var(--text); }
+    .about-card p { font-size:0.8rem;color:var(--text-muted); }
+
+    /* ===== TESTIMONIALS ===== */
+    .testimonials { padding:5rem 0;background:var(--bg2); }
+    .testimonial-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem; }
+    .testimonial-card { background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:2rem;backdrop-filter:blur(12px);transition:var(--transition); }
+    .testimonial-card:hover { border-color:rgba(74,222,128,0.2);transform:translateY(-2px); }
+    .testimonial-card p { color:var(--text-muted);font-size:0.9rem;line-height:1.7;margin-bottom:1.5rem;font-style:italic; }
+    .t-author { display:flex;align-items:center;gap:0.7rem;margin-bottom:0.8rem; }
+    .t-avatar { font-size:1.8rem; }
+    .t-author strong { display:block;font-size:0.9rem;color:var(--text); }
+    .t-author span { font-size:0.75rem;color:var(--text-muted); }
+    .stars { font-size:0.9rem; }
+
+    /* ===== CONTACT ===== */
+    .contact { padding:5rem 0;background:var(--bg); }
+    .contact-inner { display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:start; }
+    .contact-info p { color:var(--text-muted);margin-bottom:1.5rem; }
+    .contact-item { color:var(--text-muted);margin-bottom:0.7rem;font-size:0.9rem; }
+    .contact-form { display:flex;flex-direction:column;gap:1rem; }
+    .contact-form input,.contact-form textarea {
+      background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);
+      padding:0.9rem 1.2rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.9rem;
+      outline:none;transition:var(--transition);backdrop-filter:blur(8px);
+    }
+    .contact-form input::placeholder,.contact-form textarea::placeholder { color:var(--text-muted); }
+    .contact-form input:focus,.contact-form textarea:focus { border-color:rgba(74,222,128,0.4);background:var(--surface2);box-shadow:0 0 0 3px rgba(74,222,128,0.08); }
+    .contact-form textarea { resize:vertical; }
+
+    /* ===== FOOTER ===== */
+    .footer { background:var(--bg2);border-top:1px solid var(--border);padding:3rem 0;text-align:center; }
+    .footer-inner { max-width:1200px;margin:0 auto;padding:0 2rem; }
+    .footer-brand { font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:900;color:var(--green);margin-bottom:0.5rem;text-shadow:0 0 20px var(--green-glow); }
+    .footer p { color:var(--text-muted);margin-bottom:1.5rem;font-size:0.9rem; }
+    .footer-links { display:flex;justify-content:center;gap:2rem;margin-bottom:1.5rem; }
+    .footer-links a { color:var(--text-muted);text-decoration:none;font-size:0.85rem;transition:var(--transition); }
+    .footer-links a:hover { color:var(--green); }
+    .footer-copy { font-size:0.8rem;color:rgba(232,245,236,0.3); }
+
+    /* ===== CART DRAWER ===== */
+    .cart-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);z-index:1100;opacity:0;pointer-events:none;transition:var(--transition); }
+    .cart-overlay.open { opacity:1;pointer-events:all; }
+    .cart-drawer { position:fixed;top:0;right:0;height:100%;width:380px;max-width:100%;background:rgba(10,15,13,0.96);backdrop-filter:blur(32px);border-left:1px solid var(--border);z-index:1101;transform:translateX(100%);transition:transform 0.4s cubic-bezier(0.4,0,0.2,1);display:flex;flex-direction:column; }
+    .cart-drawer.open { transform:translateX(0); }
+    .cart-header { display:flex;align-items:center;justify-content:space-between;padding:1.5rem;border-bottom:1px solid var(--border); }
+    .cart-header h3 { font-size:1.1rem;font-weight:700;color:var(--text); }
+    .cart-header button { background:var(--surface);border:1px solid var(--border);color:var(--text-muted);width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1rem;transition:var(--transition); }
+    .cart-header button:hover { background:var(--surface2);color:var(--text); }
+    .cart-items { flex:1;overflow-y:auto;padding:1rem 1.5rem; }
+    .cart-empty { text-align:center;color:var(--text-muted);padding:3rem 0;font-size:0.9rem; }
+    .cart-item { display:flex;align-items:center;gap:1rem;padding:1rem 0;border-bottom:1px solid var(--border); }
+    .cart-item-emoji { font-size:2.2rem; }
+    .cart-item-info { flex:1; }
+    .cart-item-info strong { display:block;font-size:0.9rem;margin-bottom:0.2rem;color:var(--text); }
+    .cart-item-info span { font-size:0.75rem;color:var(--text-muted); }
+    .cart-item-controls { display:flex;align-items:center;gap:0.5rem; }
+    .cart-item-controls button { background:var(--surface);border:1px solid var(--border);color:var(--text);width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:var(--transition); }
+    .cart-item-controls button:hover { background:rgba(74,222,128,0.15);border-color:var(--green); }
+    .cart-item-controls span { font-size:0.9rem;font-weight:600;color:var(--text);min-width:20px;text-align:center; }
+    .cart-footer { padding:1.5rem;border-top:1px solid var(--border); }
+    .cart-total { font-size:1.1rem;font-weight:700;margin-bottom:1rem;color:var(--text); }
+    .cart-total strong { color:var(--green); }
+
+    /* ===== MODAL ===== */
+    .modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);z-index:1200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:var(--transition);padding:1rem; }
+    .modal-overlay.open { opacity:1;pointer-events:all; }
+    .modal { background:rgba(10,15,13,0.98);border:1px solid var(--border);border-radius:24px;padding:2.5rem;max-width:480px;width:100%;position:relative;backdrop-filter:blur(40px);box-shadow:0 32px 80px rgba(0,0,0,0.7);transform:scale(0.95);transition:var(--transition); }
+    .modal-overlay.open .modal { transform:scale(1); }
+    .modal-close { position:absolute;top:1rem;right:1rem;background:var(--surface);border:1px solid var(--border);color:var(--text-muted);width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1rem;transition:var(--transition); }
+    .modal-close:hover { background:var(--surface2);color:var(--text); }
+    .modal-fruit-emoji { display:block;font-size:5rem;text-align:center;margin-bottom:1rem; }
+    .modal-title { font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;text-align:center;margin-bottom:0.5rem;color:var(--text); }
+    .modal-desc { color:var(--text-muted);font-size:0.9rem;line-height:1.7;margin-bottom:1.5rem;text-align:center; }
+    .modal-price { font-size:1.4rem;font-weight:700;color:var(--green);text-align:center;margin-bottom:1.5rem;text-shadow:0 0 20px var(--green-glow); }
+    .modal-qty { display:flex;align-items:center;justify-content:center;gap:1rem;margin-bottom:1.5rem; }
+    .qty-btn { background:var(--surface);border:1px solid var(--border);color:var(--text);width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.3rem;transition:var(--transition);display:flex;align-items:center;justify-content:center; }
+    .qty-btn:hover { background:rgba(74,222,128,0.15);border-color:var(--green); }
+    .qty-display { font-size:1.3rem;font-weight:700;min-width:30px;text-align:center;color:var(--text); }
+
+    /* ===== EMAIL CHECKOUT MODAL ===== */
+    .email-input-wrapper { position:relative;margin-bottom:1rem; }
+    .email-icon { position:absolute;left:1rem;top:50%;transform:translateY(-50%);font-size:1.1rem; }
+    .email-input { width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.9rem 1.2rem 0.9rem 2.8rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.95rem;outline:none;transition:var(--transition); }
+    .email-input::placeholder { color:var(--text-muted); }
+    .email-input:focus { border-color:rgba(74,222,128,0.5);background:var(--surface2);box-shadow:0 0 0 3px rgba(74,222,128,0.08); }
+    .gmail-note { font-size:0.75rem;color:var(--text-muted);text-align:center;margin-bottom:1.5rem; }
+    .gmail-note span { color:var(--green); }
+
+    /* Order success */
+    .order-success { text-align:center; }
+    .order-success .success-icon { font-size:4rem;display:block;margin-bottom:1rem;animation:pop 0.5s cubic-bezier(0.68,-0.55,0.265,1.55); }
+    @keyframes pop { from{transform:scale(0);}to{transform:scale(1);} }
+    .order-summary-box { background:rgba(74,222,128,0.06);border:1px solid rgba(74,222,128,0.2);border-radius:var(--radius-sm);padding:1.5rem;margin:1.5rem 0;text-align:left; }
+    .order-summary-box p { font-weight:600;margin-bottom:0.5rem;color:var(--text); }
+    .order-summary-box .items-list { color:var(--text-muted);font-size:0.85rem;margin-bottom:0.8rem;line-height:1.6; }
+    .order-summary-box .total { font-weight:700;color:var(--green);font-size:1.2rem; }
+    .email-sent-badge { display:inline-flex;align-items:center;gap:0.5rem;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.25);border-radius:50px;padding:0.4rem 1rem;font-size:0.8rem;color:var(--green);margin-bottom:1.5rem; }
+
+    /* ===== TOAST ===== */
+    .toast { position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(10,15,13,0.95);border:1px solid var(--border);color:var(--text);padding:0.8rem 1.5rem;border-radius:50px;font-size:0.9rem;opacity:0;pointer-events:none;transition:all 0.4s;z-index:2000;backdrop-filter:blur(20px);white-space:nowrap; }
+    .toast.show { opacity:1;transform:translateX(-50%) translateY(0); }
+
+    /* ===== RESPONSIVE ===== */
+    @media(max-width:900px) {
+      .hero { grid-template-columns:1fr;text-align:center;padding:6rem 2rem 3rem; }
+      .hero-visual { display:none; }
+      .hero-sub { margin:0 auto 2rem; }
+      .hero-btns,.hero-stats { justify-content:center; }
+      .cat-grid { grid-template-columns:repeat(2,1fr); }
+      .about-inner,.contact-inner { grid-template-columns:1fr; }
+      .testimonial-grid { grid-template-columns:1fr; }
+      .hamburger { display:block; }
+      .nav-links { display:none; }
+      .cart-drawer { width:100%; }
+    }
+    @media(max-width:600px) {
+      .hero-btns { flex-direction:column;align-items:center; }
+      .hero-stats { gap:1.2rem; }
+    }
+
+    @keyframes fadeIn { from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);} }
+  </style>
+</head>
+<body>
+
+<!-- Ambient blobs -->
+<div class="ambient">
+  <div class="ambient-blob ab1"></div>
+  <div class="ambient-blob ab2"></div>
+  <div class="ambient-blob ab3"></div>
+</div>
+
+<!-- NAV -->
+<nav class="nav" id="navbar">
+  <div class="nav-logo">🍊 FruitHaven</div>
+  <ul class="nav-links">
+    <li><a href="#home">Home</a></li>
+    <li><a href="#shop">Shop</a></li>
+    <li><a href="#about">About</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+  <button class="cart-btn" onclick="toggleCart()">
+    🛒 Cart <span class="cart-count" id="cart-count">0</span>
+  </button>
+  <button class="hamburger" id="hamburger" onclick="toggleMenu()">☰</button>
+</nav>
+
+<!-- MOBILE MENU -->
+<div class="mobile-menu" id="mobile-menu">
+  <a href="#home" onclick="toggleMenu()">Home</a>
+  <a href="#shop" onclick="toggleMenu()">Shop</a>
+  <a href="#about" onclick="toggleMenu()">About</a>
+  <a href="#contact" onclick="toggleMenu()">Contact</a>
+</div>
+
+<!-- HERO -->
+<section class="hero" id="home">
+  <div class="hero-content">
+    <span class="hero-tag">Farm Fresh · Delivered Daily</span>
+    <h1 class="hero-title">Nature's<br><em>Finest</em><br>Fruits</h1>
+    <p class="hero-sub">Hand-picked seasonal fruits delivered to your door within 24 hours. 100% organic, zero compromise.</p>
+    <div class="hero-btns">
+      <a href="#shop" class="btn-primary">Order Now</a>
+      <a href="#about" class="btn-outline">Learn More</a>
+    </div>
+    <div class="hero-stats">
+      <div class="stat"><strong>500+</strong><span>Happy Customers</span></div>
+      <div class="stat"><strong>30+</strong><span>Fruit Varieties</span></div>
+      <div class="stat"><strong>24h</strong><span>Fast Delivery</span></div>
+    </div>
+  </div>
+  <div class="hero-visual">
+    <div class="fruit-orbit">
+      <div class="orbit-ring ring1">
+        <span class="orbit-fruit" style="--angle:0deg">🍓</span>
+        <span class="orbit-fruit" style="--angle:120deg">🥭</span>
+        <span class="orbit-fruit" style="--angle:240deg">🍇</span>
+      </div>
+      <div class="orbit-ring ring2">
+        <span class="orbit-fruit" style="--angle:60deg">🍋</span>
+        <span class="orbit-fruit" style="--angle:180deg">🍑</span>
+        <span class="orbit-fruit" style="--angle:300deg">🫐</span>
+      </div>
+      <div class="center-fruit">🍊</div>
+    </div>
+  </div>
+</section>
+
+<!-- MARQUEE STRIP -->
+<div class="marquee-strip">
+  <div class="marquee-inner">
+    <span>🍓 Strawberries</span><span>🥭 Mangoes</span><span>🍇 Grapes</span>
+    <span>🍋 Lemons</span><span>🍑 Peaches</span><span>🫐 Blueberries</span>
+    <span>🍒 Cherries</span><span>🍍 Pineapple</span><span>🥝 Kiwi</span>
+    <span>🍉 Watermelon</span><span>🍌 Banana</span><span>🍈 Melon</span>
+    <span>🍓 Strawberries</span><span>🥭 Mangoes</span><span>🍇 Grapes</span>
+    <span>🍋 Lemons</span><span>🍑 Peaches</span><span>🫐 Blueberries</span>
+  </div>
+</div>
+
+<!-- CATEGORIES -->
+<section class="categories">
+  <div class="container">
+    <h2 class="section-title">Browse by <em>Category</em></h2>
+    <div class="cat-grid">
+      <div class="cat-card" onclick="filterProducts('tropical')">
+        <div class="cat-icon">🥭</div>
+        <h3>Tropical</h3><p>Exotic & juicy</p>
+      </div>
+      <div class="cat-card" onclick="filterProducts('berries')">
+        <div class="cat-icon">🍓</div>
+        <h3>Berries</h3><p>Sweet & fresh</p>
+      </div>
+      <div class="cat-card" onclick="filterProducts('citrus')">
+        <div class="cat-icon">🍋</div>
+        <h3>Citrus</h3><p>Tangy & bright</p>
+      </div>
+      <div class="cat-card" onclick="filterProducts('stone')">
+        <div class="cat-icon">🍑</div>
+        <h3>Stone Fruits</h3><p>Rich & flavorful</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SHOP -->
+<section class="shop" id="shop">
+  <div class="container">
+    <h2 class="section-title">Fresh <em>Picks</em></h2>
+    <div class="filter-bar">
+      <button class="filter-btn active" onclick="filterProducts('all')">All</button>
+      <button class="filter-btn" onclick="filterProducts('tropical')">Tropical</button>
+      <button class="filter-btn" onclick="filterProducts('berries')">Berries</button>
+      <button class="filter-btn" onclick="filterProducts('citrus')">Citrus</button>
+      <button class="filter-btn" onclick="filterProducts('stone')">Stone Fruits</button>
+    </div>
+    <div class="products-grid" id="products-grid"></div>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section class="about" id="about">
+  <div class="container about-inner">
+    <div class="about-text">
+      <h2 class="section-title">Why <em>FruitHaven?</em></h2>
+      <p>We partner directly with local farms to bring you the freshest, most nutritious fruits. No middlemen, no wax, no chemicals — just nature at its best.</p>
+      <ul class="about-list">
+        <li>✅ 100% Organic & Pesticide-Free</li>
+        <li>✅ Sourced from Local & Trusted Farms</li>
+        <li>✅ Delivered in Eco-Friendly Packaging</li>
+        <li>✅ Same-Day Delivery in Select Areas</li>
+        <li>✅ Freshness Guaranteed or Money Back</li>
+      </ul>
+    </div>
+    <div class="about-visual">
+      <div class="about-card"><div class="about-emoji">🌱</div><div><h4>Farm to Fork</h4><p>Harvested within 12 hours of delivery</p></div></div>
+      <div class="about-card"><div class="about-emoji">🌍</div><div><h4>Eco Packaging</h4><p>100% biodegradable materials</p></div></div>
+      <div class="about-card"><div class="about-emoji">⭐</div><div><h4>4.9/5 Rating</h4><p>From 500+ verified customers</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="testimonials">
+  <div class="container">
+    <h2 class="section-title">What Our <em>Customers Say</em></h2>
+    <div class="testimonial-grid">
+      <div class="testimonial-card">
+        <p>"The mangoes are absolutely divine. I've never tasted anything so fresh!"</p>
+        <div class="t-author"><div class="t-avatar">🧑‍💼</div><div><strong>Arif Rahman</strong><span>Dhaka</span></div></div>
+        <div class="stars">⭐⭐⭐⭐⭐</div>
+      </div>
+      <div class="testimonial-card">
+        <p>"Fast delivery and the strawberries were perfectly ripe. Will order again!"</p>
+        <div class="t-author"><div class="t-avatar">👩</div><div><strong>Priya Das</strong><span>Sylhet</span></div></div>
+        <div class="stars">⭐⭐⭐⭐⭐</div>
+      </div>
+      <div class="testimonial-card">
+        <p>"Best fruit subscription I've tried. Quality is consistently exceptional."</p>
+        <div class="t-author"><div class="t-avatar">🧑</div><div><strong>Tanvir Islam</strong><span>Chittagong</span></div></div>
+        <div class="stars">⭐⭐⭐⭐⭐</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section class="contact" id="contact">
+  <div class="container contact-inner">
+    <div class="contact-info">
+      <h2 class="section-title">Get in <em>Touch</em></h2>
+      <p>Have a question? We're here to help!</p>
+      <div class="contact-item">📍 Gulshan, Dhaka, Bangladesh</div>
+      <div class="contact-item">📞 +880 1700 000000</div>
+      <div class="contact-item">📧 hello@fruithaven.com</div>
+    </div>
+    <form class="contact-form" onsubmit="submitContact(event)">
+      <input type="text" placeholder="Your Name" required />
+      <input type="email" placeholder="Your Email" required />
+      <textarea placeholder="Your Message" rows="4" required></textarea>
+      <button type="submit" class="btn-primary">Send Message</button>
+    </form>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">🍊 FruitHaven</div>
+    <p>Fresh fruits, delivered with love.</p>
+    <div class="footer-links">
+      <a href="#home">Home</a><a href="#shop">Shop</a><a href="#about">About</a><a href="#contact">Contact</a>
+    </div>
+    <p class="footer-copy">© 2026 FruitHaven. All rights reserved.</p>
+  </div>
+</footer>
+
+<!-- CART DRAWER -->
+<div class="cart-overlay" id="cart-overlay" onclick="toggleCart()"></div>
+<div class="cart-drawer" id="cart-drawer">
+  <div class="cart-header">
+    <h3>Your Cart 🛒</h3>
+    <button onclick="toggleCart()">✕</button>
+  </div>
+  <div class="cart-items" id="cart-items">
+    <p class="cart-empty">Your cart is empty 🛒</p>
+  </div>
+  <div class="cart-footer" id="cart-footer" style="display:none">
+    <div class="cart-total">Total: <strong id="cart-total">৳0</strong></div>
+    <button class="btn-primary" style="width:100%" onclick="showEmailModal()">Checkout →</button>
+  </div>
+</div>
+
+<!-- MODAL (product detail / order flow) -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== PRODUCTS =====
+const products = [
+  { id:1, name:'Sweet Mango', emoji:'🥭', category:'tropical', price:180, unit:'per kg', origin:'Rajshahi, Bangladesh', badge:'Best Seller', desc:'Sun-ripened Rajshahi mangoes — the sweetest in the world. Rich, golden flesh with zero fibers.' },
+  { id:2, name:'Fresh Strawberries', emoji:'🍓', category:'berries', price:320, unit:'per 500g', origin:'Local Farm', badge:'Organic', desc:'Plump, juicy strawberries hand-picked at peak ripeness. Naturally sweet with a hint of tartness.' },
+  { id:3, name:'Grape Clusters', emoji:'🍇', category:'berries', price:250, unit:'per kg', origin:'Imported', badge:null, desc:'Seedless green and red grapes with a perfect balance of sweetness. Crisp and refreshing.' },
+  { id:4, name:'Fresh Lemons', emoji:'🍋', category:'citrus', price:80, unit:'per kg', origin:'Local Farm', badge:null, desc:'Bright, zesty lemons with high juice content. Perfect for lemonade, cooking, or vitamin C.' },
+  { id:5, name:'Ripe Peaches', emoji:'🍑', category:'stone', price:290, unit:'per kg', origin:'Imported', badge:'Seasonal', desc:'Velvety soft peaches with a fragrant aroma and juicy flesh. Sweet with a subtle tang.' },
+  { id:6, name:'Blueberries', emoji:'🫐', category:'berries', price:480, unit:'per 250g', origin:'Imported', badge:'Super Food', desc:'Premium blueberries bursting with antioxidants. Sweet, plump, perfect for smoothies.' },
+  { id:7, name:'Sweet Pineapple', emoji:'🍍', category:'tropical', price:120, unit:'each', origin:'Sylhet, Bangladesh', badge:null, desc:'Ripe, golden pineapples from the hills of Sylhet. Naturally sweet tropical flavor.' },
+  { id:8, name:'Dragon Fruit', emoji:'🎆', category:'tropical', price:350, unit:'each', origin:'Local Farm', badge:'Exotic', desc:'Stunning pink dragon fruit with white speckled flesh. Mildly sweet with kiwi-like texture.' },
+  { id:9, name:'Kiwi Fruits', emoji:'🥝', category:'tropical', price:220, unit:'per 6 pcs', origin:'Imported', badge:null, desc:'Tangy-sweet kiwis packed with vitamin C. Great fresh, in salads, or as dessert toppings.' },
+  { id:10, name:'Watermelon', emoji:'🍉', category:'tropical', price:90, unit:'per kg', origin:'Local Farm', badge:'Summer Pick', desc:'Cool, refreshing watermelon with vibrant red flesh. Seedless variety, incredibly sweet.' },
+  { id:11, name:'Sweet Cherries', emoji:'🍒', category:'stone', price:560, unit:'per 250g', origin:'Imported', badge:'Premium', desc:'Plump, dark cherries with a rich, sweet flavor. Deep red indicates maximum ripeness.' },
+  { id:12, name:'Mandarin Orange', emoji:'🍊', category:'citrus', price:160, unit:'per kg', origin:'Imported', badge:null, desc:'Easy-peel mandarin oranges with sweet, juicy flavor. Packed with vitamin C.' },
+];
+
+let cart = JSON.parse(localStorage.getItem('fruithaven-cart') || '[]');
+let modalQty = 1;
+let currentProduct = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderProducts(products);
+  updateCartUI();
+  window.addEventListener('scroll', () => {
+    const nav = document.getElementById('navbar');
+    nav.classList.toggle('scrolled', window.scrollY > 50);
+  });
+});
+
+function toggleMenu() {
+  document.getElementById('mobile-menu').classList.toggle('open');
+}
+
+function filterProducts(category) {
+  document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    const t = btn.textContent.trim().toLowerCase();
+    if (t === category || (category === 'all' && t === 'all')) btn.classList.add('active');
+  });
+  const list = category === 'all' ? [...products] : products.filter(p => p.category === category);
+  renderProducts(list, true);
+  document.getElementById('shop').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderProducts(list, animate = false) {
+  const grid = document.getElementById('products-grid');
+  grid.innerHTML = '';
+  list.forEach((p, i) => {
+    const card = document.createElement('div');
+    card.className = 'product-card';
+    if (animate) { card.style.opacity = '0'; card.style.animation = `fadeIn 0.4s ease ${i*0.05}s forwards`; }
+    card.innerHTML = `
+      <div class="product-img" onclick="openModal(${p.id})">
+        ${p.badge ? `<span class="product-badge">${p.badge}</span>` : ''}
+        ${p.emoji}
+      </div>
+      <div class="product-info">
+        <div class="product-name">${p.name}</div>
+        <div class="product-origin">📍 ${p.origin}</div>
+        <div class="product-bottom">
+          <div class="product-price">৳${p.price}<small style="font-size:0.65rem;color:var(--text-muted);font-weight:400"> ${p.unit}</small></div>
+          <button class="add-btn" onclick="event.stopPropagation();quickAdd(${p.id})" title="Add to cart">+</button>
+        </div>
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+
+function openModal(id) {
+  currentProduct = products.find(p => p.id === id);
+  if (!currentProduct) return;
+  modalQty = 1;
+  document.getElementById('modal-content').innerHTML = `
+    <span class="modal-fruit-emoji">${currentProduct.emoji}</span>
+    <h2 class="modal-title">${currentProduct.name}</h2>
+    <p style="color:var(--text-muted);font-size:0.8rem;text-align:center;margin-bottom:0.8rem">📍 ${currentProduct.origin}</p>
+    <p class="modal-desc">${currentProduct.desc}</p>
+    <div class="modal-price">৳${currentProduct.price} <small style="font-size:0.9rem;color:var(--text-muted);font-weight:400">${currentProduct.unit}</small></div>
+    <div class="modal-qty">
+      <button class="qty-btn" onclick="changeQty(-1)">−</button>
+      <span class="qty-display" id="modal-qty-display">1</span>
+      <button class="qty-btn" onclick="changeQty(1)">+</button>
+      <span style="color:var(--text-muted);font-size:0.85rem">= ৳<span id="modal-subtotal">${currentProduct.price}</span></span>
+    </div>
+    <button class="btn-primary" style="width:100%" onclick="addToCartFromModal()">Add to Cart 🛒</button>`;
+  document.getElementById('modal-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function changeQty(d) {
+  modalQty = Math.max(1, modalQty + d);
+  document.getElementById('modal-qty-display').textContent = modalQty;
+  document.getElementById('modal-subtotal').textContent = (currentProduct.price * modalQty).toLocaleString();
+}
+
+function addToCartFromModal() {
+  for (let i = 0; i < modalQty; i++) addToCart(currentProduct.id);
+  closeModal();
+}
+
+function quickAdd(id) { addToCart(id); }
+
+function addToCart(id) {
+  const product = products.find(p => p.id === id);
+  const existing = cart.find(i => i.id === id);
+  if (existing) existing.qty++;
+  else cart.push({ ...product, qty: 1 });
+  saveCart(); updateCartUI();
+  showToast(`${product.emoji} ${product.name} added to cart!`);
+}
+
+function removeFromCart(id) {
+  const idx = cart.findIndex(i => i.id === id);
+  if (idx === -1) return;
+  if (cart[idx].qty > 1) cart[idx].qty--;
+  else cart.splice(idx, 1);
+  saveCart(); updateCartUI();
+}
+
+function saveCart() { localStorage.setItem('fruithaven-cart', JSON.stringify(cart)); }
+
+function updateCartUI() {
+  const count = cart.reduce((s, i) => s + i.qty, 0);
+  document.getElementById('cart-count').textContent = count;
+  const itemsEl = document.getElementById('cart-items');
+  const footerEl = document.getElementById('cart-footer');
+  if (cart.length === 0) {
+    itemsEl.innerHTML = '<p class="cart-empty">Your cart is empty 🛒</p>';
+    footerEl.style.display = 'none';
+    return;
+  }
+  footerEl.style.display = 'block';
+  let total = 0;
+  itemsEl.innerHTML = cart.map(item => {
+    total += item.price * item.qty;
+    return `<div class="cart-item">
+      <div class="cart-item-emoji">${item.emoji}</div>
+      <div class="cart-item-info"><strong>${item.name}</strong><span>৳${item.price} ${item.unit}</span></div>
+      <div class="cart-item-controls">
+        <button onclick="removeFromCart(${item.id})">−</button>
+        <span>${item.qty}</span>
+        <button onclick="addToCart(${item.id})">+</button>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('cart-total').textContent = `৳${total.toLocaleString()}`;
+}
+
+function toggleCart() {
+  const drawer = document.getElementById('cart-drawer');
+  const overlay = document.getElementById('cart-overlay');
+  const isOpen = drawer.classList.contains('open');
+  drawer.classList.toggle('open', !isOpen);
+  overlay.classList.toggle('open', !isOpen);
+  document.body.style.overflow = isOpen ? '' : 'hidden';
+}
+
+// ===== EMAIL CHECKOUT FLOW =====
+function showEmailModal() {
+  const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  const items = cart.map(i => `${i.qty}× ${i.name}`).join(', ');
+
+  document.getElementById('modal-content').innerHTML = `
+    <div style="text-align:center;margin-bottom:1.5rem">
+      <span style="font-size:3rem">📧</span>
+      <h2 class="modal-title" style="margin-top:0.5rem">Confirm Your Order</h2>
+      <p style="color:var(--text-muted);font-size:0.9rem;margin-top:0.5rem">Enter your Gmail to receive order confirmation</p>
+    </div>
+    <div class="order-summary-box">
+      <p>Order Summary</p>
+      <div class="items-list">${items}</div>
+      <div class="total">Total: ৳${total.toLocaleString()}</div>
+    </div>
+    <div class="email-input-wrapper">
+      <span class="email-icon">✉️</span>
+      <input type="email" id="checkout-email" class="email-input" placeholder="your@gmail.com" />
+    </div>
+    <p class="gmail-note">We'll send your order confirmation to your <span>Gmail inbox</span></p>
+    <button class="btn-primary" style="width:100%" onclick="placeOrder()">Place Order & Send Confirmation 🚀</button>
+  `;
+
+  // Close cart drawer, open modal
+  document.getElementById('cart-drawer').classList.remove('open');
+  document.getElementById('cart-overlay').classList.remove('open');
+  document.getElementById('modal-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  setTimeout(() => document.getElementById('checkout-email')?.focus(), 100);
+}
+
+function placeOrder() {
+  const emailInput = document.getElementById('checkout-email');
+  const email = emailInput?.value.trim();
+
+  if (!email || !email.includes('@')) {
+    emailInput.style.borderColor = '#f87171';
+    emailInput.style.boxShadow = '0 0 0 3px rgba(248,113,113,0.15)';
+    showToast('⚠️ Please enter a valid email address');
+    return;
+  }
+
+  const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  const items = cart.map(i => `${i.qty}× ${i.name} (৳${(i.price * i.qty).toLocaleString()})`);
+  const orderId = 'FH-' + Date.now().toString().slice(-6);
+
+  // Build Gmail compose URL with pre-filled order confirmation
+  const subject = encodeURIComponent(`✅ FruitHaven Order Confirmed! (${orderId})`);
+  const body = encodeURIComponent(
+`Hi there! 🍊
+
+Your FruitHaven order has been placed successfully!
+
+━━━━━━━━━━━━━━━━━━━━
+ORDER ID: ${orderId}
+━━━━━━━━━━━━━━━━━━━━
+
+📦 ORDER DETAILS:
+${items.join('\n')}
+
+💰 TOTAL: ৳${total.toLocaleString()}
+
+🚚 DELIVERY: Within 24 hours
+📍 We'll contact you for the delivery address.
+
+━━━━━━━━━━━━━━━━━━━━
+Thank you for choosing FruitHaven!
+🌱 Fresh • Organic • Delivered with Love
+
+Questions? Reply to this email or call +880 1700 000000
+━━━━━━━━━━━━━━━━━━━━
+
+© 2026 FruitHaven, Gulshan, Dhaka, Bangladesh`
+  );
+
+  const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(email)}&su=${subject}&body=${body}`;
+
+  // Show success modal
+  document.getElementById('modal-content').innerHTML = `
+    <div class="order-success">
+      <span class="success-icon">🎉</span>
+      <h2 class="modal-title">Order Placed!</h2>
+      <p style="color:var(--text-muted);margin:0.5rem 0 1rem;font-size:0.9rem">Your order has been confirmed</p>
+      <div class="email-sent-badge">
+        ✅ Confirmation being sent to ${email}
+      </div>
+      <div class="order-summary-box">
+        <p>Order <span style="color:var(--green);font-family:monospace">${orderId}</span></p>
+        <div class="items-list">${cart.map(i => `${i.qty}× ${i.name}`).join('<br>')}</div>
+        <div class="total">Total: ৳${total.toLocaleString()}</div>
+      </div>
+      <p style="color:var(--text-muted);font-size:0.8rem;margin-bottom:1rem">Click below to open Gmail and send your order confirmation email:</p>
+      <a href="${gmailUrl}" target="_blank" rel="noopener" class="btn-primary" style="width:100%;display:flex;align-items:center;justify-content:center;gap:0.5rem;margin-bottom:0.8rem;text-decoration:none">
+        📨 Open Gmail to Send Confirmation
+      </a>
+      <button style="width:100%;background:transparent;border:1px solid var(--border);color:var(--text-muted);padding:0.7rem;border-radius:50px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:0.9rem;transition:var(--transition)" onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--border)'" onclick="closeModal();clearCart()">Done ✓</button>
+    </div>`;
+
+  clearCart();
+}
+
+function clearCart() {
+  cart = [];
+  saveCart();
+  updateCartUI();
+}
+
+function submitContact(e) {
+  e.preventDefault();
+  showToast('✉️ Message sent! We\'ll reply within 24 hours.');
+  e.target.reset();
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
